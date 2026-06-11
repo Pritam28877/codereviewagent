@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum IndexingStatus {
+  NOT_STARTED
+  INDEXING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id                  String         @id
+  email               String         @unique
+  plan                Plan           @default(FREE)
+  polarCustomerId     String?
+  polarSubscriptionId String?
+  prsUsed             Int            @default(0)
+  prsCreated          Int            @default(0)
+  issuesUsed          Int            @default(0)
+  chatMessagesUsed    Int            @default(0)
+  billingCycleStart   DateTime       @default(now())
+  installations       Installation[]
+  rules               Rule[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+}
+
+model Rule {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Installation {
+  id             String       @id @default(cuid())
+  installationId Int          @unique
+  accountLogin   String
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repositories   Repository[]
+  createdAt      DateTime     @default(now())
+}
+
+model Repository {
+  id             String         @id @default(cuid())
+  githubId       BigInt         @unique
+  name           String
+  fullName       String
+  installationId String
+  installation   Installation   @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  pullRequests   PullRequest[]
+  issues         Issue[]
+  indexingStatus IndexingStatus @default(NOT_STARTED)
+  createdAt      DateTime       @default(now())
+}
+
+model PullRequest {
+  id           String     @id @default(cuid())
+  githubId     BigInt
+  number       Int
+  title        String
+  repositoryId String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  reviewedAt   DateTime   @default(now())
+}
+
+model Issue {
+  id           String     @id @default(cuid())
+  githubId     BigInt
+  number       Int
+  title        String
+  repositoryId String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  analyzedAt   DateTime   @default(now())
+}
